@@ -1,36 +1,138 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function ReceiptScanner() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
     if (!file) {
       return;
     }
 
+    stopCamera();
+
+    if (imageUrl) {
+      URL.revokeObjectURL(imageUrl);
+    }
+
     setImageFile(file);
-
-    const url = URL.createObjectURL(file);
-    setImageUrl(url);
-
+    setImageUrl(URL.createObjectURL(file));
     setStatusMessage("");
   }
 
-  function openCameraOrFilePicker() {
+  function openFilePicker() {
     fileInputRef.current?.click();
+  }
+
+  async function startCamera() {
+    try {
+      setCameraError("");
+      setStatusMessage("");
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "environment",
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+      setCameraActive(true);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error(error);
+      setCameraError(
+        "Could not access the camera. Check your browser camera permissions."
+      );
+    }
+  }
+
+  function stopCamera() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setCameraActive(false);
+  }
+
+  function capturePhoto() {
+    if (!videoRef.current || !canvasRef.current) {
+      return;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return;
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          return;
+        }
+
+        const file = new File([blob], "receipt-photo.jpg", {
+          type: "image/jpeg",
+        });
+
+        if (imageUrl) {
+          URL.revokeObjectURL(imageUrl);
+        }
+
+        setImageFile(file);
+        setImageUrl(URL.createObjectURL(blob));
+        setStatusMessage("");
+
+        stopCamera();
+      },
+      "image/jpeg",
+      0.9
+    );
   }
 
   function clearImage() {
     setImageFile(null);
+
+    if (imageUrl) {
+      URL.revokeObjectURL(imageUrl);
+    }
+
     setImageUrl(null);
     setStatusMessage("");
 
@@ -47,10 +149,10 @@ export default function ReceiptScanner() {
     setIsAnalyzing(true);
     setStatusMessage("Analyzing your receipt...");
 
-    // Temporary fake delay until AI is connected
+    // Temporary placeholder until AI is connected
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    console.log("Ready to analyze:", imageFile.name);
+    console.log("Ready to analyze receipt:", imageFile.name);
 
     setIsAnalyzing(false);
     setStatusMessage("Receipt ready for review.");
@@ -68,12 +170,7 @@ export default function ReceiptScanner() {
         boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
       }}
     >
-      <h2
-        style={{
-          marginTop: 0,
-          marginBottom: "8px",
-        }}
-      >
+      <h2 style={{ marginTop: 0, marginBottom: "8px" }}>
         Scan Receipt
       </h2>
 
@@ -84,34 +181,107 @@ export default function ReceiptScanner() {
           color: "#666",
         }}
       >
-        Take a photo of your grocery receipt or upload one from your device.
+        Take a photo of your grocery receipt or upload an existing image.
       </p>
 
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
-        onChange={handleImageChange}
+        onChange={handleFileChange}
         style={{ display: "none" }}
       />
 
-      {!imageUrl && (
-        <button
-          type="button"
-          onClick={openCameraOrFilePicker}
+      {!imageUrl && !cameraActive && (
+        <div
           style={{
-            width: "100%",
-            padding: "18px",
-            borderRadius: "12px",
-            border: "2px dashed #aaa",
-            backgroundColor: "#fafafa",
-            cursor: "pointer",
-            fontSize: "16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
           }}
         >
-          📷 Take or Choose Receipt Photo
-        </button>
+          <button
+            type="button"
+            onClick={startCamera}
+            style={{
+              width: "100%",
+              padding: "18px",
+              borderRadius: "12px",
+              border: "2px dashed #aaa",
+              backgroundColor: "#fafafa",
+              cursor: "pointer",
+              fontSize: "16px",
+            }}
+          >
+            📷 Open Camera
+          </button>
+
+          <button
+            type="button"
+            onClick={openFilePicker}
+            style={{
+              width: "100%",
+              padding: "18px",
+              borderRadius: "12px",
+              border: "1px solid #bbb",
+              backgroundColor: "white",
+              cursor: "pointer",
+              fontSize: "16px",
+            }}
+          >
+            🖼️ Upload Photo
+          </button>
+        </div>
+      )}
+
+      {cameraActive && (
+        <div>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            style={{
+              width: "100%",
+              borderRadius: "12px",
+              marginBottom: "12px",
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={capturePhoto}
+            style={{
+              width: "100%",
+              padding: "14px",
+              borderRadius: "10px",
+              marginBottom: "10px",
+              cursor: "pointer",
+            }}
+          >
+            📸 Capture Receipt
+          </button>
+
+          <button
+            type="button"
+            onClick={stopCamera}
+            style={{
+              width: "100%",
+              padding: "12px",
+              borderRadius: "10px",
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+
+      {cameraError && (
+        <p style={{ color: "red", marginTop: "12px" }}>
+          {cameraError}
+        </p>
       )}
 
       {imageUrl && (
@@ -138,7 +308,7 @@ export default function ReceiptScanner() {
           >
             <button
               type="button"
-              onClick={openCameraOrFilePicker}
+              onClick={startCamera}
               disabled={isAnalyzing}
               style={{
                 flex: 1,
@@ -149,12 +319,12 @@ export default function ReceiptScanner() {
                 cursor: "pointer",
               }}
             >
-              Change Photo
+              Retake
             </button>
 
             <button
               type="button"
-              onClick={clearImage}
+              onClick={openFilePicker}
               disabled={isAnalyzing}
               style={{
                 flex: 1,
@@ -165,9 +335,26 @@ export default function ReceiptScanner() {
                 cursor: "pointer",
               }}
             >
-              Remove
+              Change File
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={clearImage}
+            disabled={isAnalyzing}
+            style={{
+              width: "100%",
+              padding: "12px",
+              marginBottom: "12px",
+              borderRadius: "10px",
+              border: "1px solid #bbb",
+              backgroundColor: "white",
+              cursor: "pointer",
+            }}
+          >
+            Remove Photo
+          </button>
 
           <button
             type="button"
