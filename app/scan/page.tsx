@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ReceiptScanner from "@/components/ReceiptScanner";
+import ItemScanner from "@/components/ItemScanner";
 
 type AddMode = "receipt" | "items" | "manual";
 
@@ -86,36 +87,7 @@ export default function ScanPage() {
 
       {mode === "receipt" && <ReceiptScanner />}
 
-      {mode === "items" && (
-        <div
-          style={{
-            padding: "24px",
-            border: "1px solid #ddd",
-            borderRadius: "16px",
-          }}
-        >
-          <h2>Scan Grocery Items</h2>
-
-          <p style={{ color: "#666" }}>
-            Take a photo of your groceries and we’ll identify the items.
-          </p>
-
-          <button
-            type="button"
-            style={{
-              width: "100%",
-              padding: "18px",
-              borderRadius: "12px",
-              border: "2px dashed #aaa",
-              backgroundColor: "#fafafa",
-              cursor: "pointer",
-              fontSize: "16px",
-            }}
-          >
-            📷 Take or Choose Grocery Photo
-          </button>
-        </div>
-      )}
+      {mode === "items" && <ItemScanner />}
 
       {mode === "manual" && (
         <div
