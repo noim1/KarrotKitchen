@@ -1,28 +1,23 @@
 import { NextResponse } from "next/server";
 import {
-    getInventoryStats,
-    getAchievements,
-  } from "@/lib/database";
+  getInventoryStats,
+  getAchievements,
+} from "@/lib/database";
 
 export async function GET() {
   try {
-    const stats =
-      await getInventoryStats();
+    const [stats, achievements] = await Promise.all([
+      getInventoryStats(),
+      getAchievements(),
+    ]);
 
-    const achievements =
-    await getAchievements();
-  
     return NextResponse.json({
-        success: true,
-        stats,
-        achievements,
-      });
-    
+      success: true,
+      stats,
+      achievements,
+    });
   } catch (error) {
-    console.error(
-      "Failed to fetch stats:",
-      error
-    );
+    console.error("Failed to fetch stats:", error);
 
     return NextResponse.json(
       {
@@ -30,7 +25,7 @@ export async function GET() {
         error:
           error instanceof Error
             ? error.message
-            : JSON.stringify(error),
+            : "Could not load stats",
       },
       { status: 500 }
     );

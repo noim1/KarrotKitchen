@@ -4,6 +4,9 @@ import { useState } from "react";
 import ReceiptScanner from "@/components/ReceiptScanner";
 import ItemScanner from "@/components/ItemScanner";
 import { addManualInventoryItem } from "@/lib/api";
+import AppIcon from "@/components/AppIcon";
+import { categoryMeta, foodCategories } from "@/lib/icons";
+import type { FoodCategory } from "@/types";
 
 type AddMode = "receipt" | "items" | "manual";
 
@@ -292,26 +295,52 @@ export default function ScanPage() {
             Category
           </label>
 
-          <select
-            value={manualCategory}
-            onChange={(event) =>
-              setManualCategory(
-                event.target.value as ManualCategory
-              )
-            }
-            style={inputStyle}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: "8px",
+              marginBottom: "12px",
+            }}
           >
-            <option value="" disabled>
-              Select category
-            </option>
-            <option value="meat">Meat</option>
-            <option value="dairy">Dairy</option>
-            <option value="fruit">Fruit</option>
-            <option value="vegetables">Vegetables</option>
-            <option value="condiments">Condiments</option>
-            <option value="staple">Staple Foods</option>
-            <option value="other">Other</option>
-          </select>
+            {foodCategories.map((category: FoodCategory) => {
+              const meta = categoryMeta[category];
+              const selected = manualCategory === category;
+
+              return (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setManualCategory(category)}
+                  style={{
+                    padding: "10px 6px",
+                    borderRadius: "12px",
+                    border: selected
+                      ? "2px solid var(--accent)"
+                      : "1px solid var(--border)",
+                    backgroundColor: selected
+                      ? "var(--card)"
+                      : "transparent",
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "6px",
+                    fontSize: "11px",
+                    color: "var(--foreground)",
+                  }}
+                >
+                  <AppIcon
+                    src={meta.src}
+                    fallback={meta.fallback}
+                    alt={meta.label}
+                    size={28}
+                  />
+                  {meta.label}
+                </button>
+              );
+            })}
+          </div>
 
           <button
             type="button"

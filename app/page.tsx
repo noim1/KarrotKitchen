@@ -67,64 +67,33 @@ export default function HomePage() {
         padding: "24px 20px 40px",
       }}
     >
-      {/* Header / future logo or character area */}
-      <section
+      <header
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "16px",
-          marginBottom: "24px",
+          marginBottom: "3px",
         }}
       >
-        <div>
-          <h1
-            style={{
-              fontSize: "32px",
-              margin: 0,
-            }}
-          >
-            Karrot Kitchen
-          </h1>
+        
+        <img
+        src="/images/categories/Title.png"
+        alt="Karrot Kitchen"
+        style={{
+          width: "370px",
+          maxWidth: "100%",
+          height: "auto",
+          display: "block",
+          objectFit: "contain",
+        }}
+      />
 
-          <p
-            style={{
-              color: "#888",
-              marginTop: "6px",
-              marginBottom: 0,
-            }}
-          >
-            Cook what you have. Waste less.
-          </p>
-        </div>
+      </header>
 
-        {/* Replace this box with designer artwork/logo later */}
-        <div
-          style={{
-            width: "72px",
-            height: "72px",
-            border: "1px dashed #555",
-            borderRadius: "18px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#777",
-            fontSize: "11px",
-            textAlign: "center",
-            flexShrink: 0,
-          }}
-        >
-          Image
-        </div>
-      </section>
-
-      {/* Main summary card */}
       <section
         style={{
           padding: "20px",
-          border: "1px solid #333",
+          border: "1px solid var(--border)",
           borderRadius: "20px",
           marginBottom: "24px",
+          background: "var(--surface)",
         }}
       >
         <h2
@@ -150,8 +119,9 @@ export default function HomePage() {
               textDecoration: "none",
               color: "inherit",
               padding: "16px",
-              border: "1px solid #333",
+              border: "1px solid var(--border)",
               borderRadius: "14px",
+              background: "var(--surface-soft)",
             }}
           >
             <div
@@ -165,7 +135,7 @@ export default function HomePage() {
 
             <div
               style={{
-                color: "#888",
+                color: "var(--muted)",
                 fontSize: "13px",
                 marginTop: "4px",
               }}
@@ -177,8 +147,9 @@ export default function HomePage() {
           <div
             style={{
               padding: "16px",
-              border: "1px solid #333",
+              border: "1px solid var(--border)",
               borderRadius: "14px",
+              background: "var(--surface-soft)",
             }}
           >
             <div
@@ -192,7 +163,7 @@ export default function HomePage() {
 
             <div
               style={{
-                color: "#888",
+                color: "var(--muted)",
                 fontSize: "13px",
                 marginTop: "4px",
               }}
@@ -203,7 +174,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Expiring food */}
       <section
         style={{
           marginBottom: "28px",
@@ -242,9 +212,10 @@ export default function HomePage() {
           <div
             style={{
               padding: "20px",
-              border: "1px solid #333",
+              border: "1px solid var(--border)",
               borderRadius: "16px",
-              color: "#888",
+              color: "var(--muted)",
+              background: "var(--surface)",
             }}
           >
             Nothing in your fridge yet.
@@ -264,39 +235,28 @@ export default function HomePage() {
                   display: "flex",
                   alignItems: "center",
                   gap: "12px",
-                  padding: "14px",
-                  border: "1px solid #333",
+                  padding: "16px",
+                  border: "1px solid var(--border)",
                   borderRadius: "16px",
+                  background: "var(--surface)",
                 }}
               >
-                {/* Future food/item image */}
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    border: "1px dashed #555",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#777",
-                    fontSize: "10px",
-                    flexShrink: 0,
-                  }}
-                >
-                  Image
-                </div>
-
                 <div
                   style={{
                     flex: 1,
                   }}
                 >
-                  <strong>{item.name}</strong>
+                  <strong
+                    style={{
+                      fontSize: "17px",
+                    }}
+                  >
+                    {item.name}
+                  </strong>
 
                   <div
                     style={{
-                      color: "#888",
+                      color: "var(--muted)",
                       fontSize: "13px",
                       marginTop: "4px",
                     }}
@@ -308,7 +268,8 @@ export default function HomePage() {
                 <div
                   style={{
                     fontSize: "13px",
-                    color: "#888",
+                    color: "var(--muted)",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {item.quantity}
@@ -320,7 +281,6 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* Quick actions */}
       <section
         style={{
           marginBottom: "28px",
@@ -347,30 +307,15 @@ export default function HomePage() {
             style={{
               textDecoration: "none",
               color: "inherit",
-              padding: "20px 16px",
-              border: "1px solid #333",
+              padding: "22px 14px",
+              border: "1px solid var(--border)",
               borderRadius: "18px",
               textAlign: "center",
-              fontWeight: "600",
+              fontWeight: "700",
+              fontSize: "16px",
+              background: "var(--surface)",
             }}
           >
-            <div
-              style={{
-                width: "48px",
-                height: "48px",
-                border: "1px dashed #555",
-                borderRadius: "14px",
-                margin: "0 auto 10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#777",
-                fontSize: "10px",
-              }}
-            >
-              Icon
-            </div>
-
             Add Groceries
           </Link>
 
@@ -379,50 +324,18 @@ export default function HomePage() {
             style={{
               textDecoration: "none",
               color: "inherit",
-              padding: "20px 16px",
-              border: "1px solid #333",
+              padding: "22px 14px",
+              border: "1px solid var(--border)",
               borderRadius: "18px",
               textAlign: "center",
-              fontWeight: "600",
+              fontWeight: "700",
+              fontSize: "16px",
+              background: "var(--surface)",
             }}
           >
-            <div
-              style={{
-                width: "48px",
-                height: "48px",
-                border: "1px dashed #555",
-                borderRadius: "14px",
-                margin: "0 auto 10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#777",
-                fontSize: "10px",
-              }}
-            >
-              Icon
-            </div>
-
             Find Recipes
           </Link>
         </div>
-      </section>
-
-      {/* Future character / illustration area */}
-      <section
-        style={{
-          minHeight: "120px",
-          border: "1px dashed #555",
-          borderRadius: "20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#777",
-          textAlign: "center",
-          padding: "20px",
-        }}
-      >
-        Character / illustration area
       </section>
     </main>
   );

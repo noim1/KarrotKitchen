@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { getInventory } from "@/lib/api";
+import { categoryMeta } from "@/lib/icons";
 import { FoodItem } from "@/types";
+import AppIcon from "@/components/AppIcon";
 
 export default function FridgePage() {
   const [inventory, setInventory] = useState<FoodItem[]>([]);
@@ -46,25 +48,8 @@ export default function FridgePage() {
     return acc;
   }, []);
 
-  function getCategoryLabel(category: FoodItem["category"]) {
-    switch (category) {
-      case "meat":
-        return "Meat";
-      case "dairy":
-        return "Dairy";
-      case "fruit":
-        return "Fruit";
-      case "vegetables":
-        return "Vegetables";
-      case "condiments":
-        return "Condiments";
-      case "staple":
-        return "Staple Foods";
-      case "other":
-        return "Other";
-      default:
-        return "Other";
-    }
+  function getCategory(category: FoodItem["category"]) {
+    return categoryMeta[category] ?? categoryMeta.other;
   }
 
   function getDaysUntilExpiration(expirationDate: string) {
@@ -142,7 +127,7 @@ export default function FridgePage() {
         padding: "28px 20px 40px",
       }}
     >
-      <div
+      <header
         style={{
           marginBottom: "24px",
         }}
@@ -150,7 +135,7 @@ export default function FridgePage() {
         <h1
           style={{
             fontSize: "32px",
-            marginBottom: "6px",
+            margin: 0,
           }}
         >
           My Fridge
@@ -158,20 +143,21 @@ export default function FridgePage() {
 
         <p
           style={{
-            color: "#888",
-            marginTop: 0,
+            color: "var(--muted)",
+            marginTop: "6px",
+            marginBottom: 0,
           }}
         >
           {groupedInventory.length}{" "}
           {groupedInventory.length === 1 ? "item" : "items"} in your fridge
         </p>
-      </div>
+      </header>
 
       {sortedInventory.length === 0 ? (
         <div
           style={{
             padding: "28px 20px",
-            border: "1px solid #333",
+            border: "1px solid var(--border)",
             borderRadius: "18px",
             textAlign: "center",
           }}
@@ -186,7 +172,7 @@ export default function FridgePage() {
 
           <p
             style={{
-              color: "#888",
+              color: "var(--muted)",
               marginBottom: 0,
             }}
           >
@@ -202,70 +188,92 @@ export default function FridgePage() {
             );
 
           const isUrgent = daysUntilExpiration <= 1;
+
           const isSoon =
             daysUntilExpiration > 1 &&
             daysUntilExpiration <= 3;
 
+          const category = getCategory(item.category);
+
           return (
-            <div
+            <article
               key={item.id}
               style={{
-                padding: "18px",
+                padding: "16px",
                 marginBottom: "12px",
                 border: isUrgent
                   ? "2px solid #b85c5c"
                   : isSoon
                   ? "2px solid #b89b5c"
-                  : "1px solid #333",
-                borderRadius: "16px",
+                  : "1px solid var(--border)",
+                borderRadius: "18px",
+                background: "var(--surface)",
               }}
             >
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                  alignItems: "flex-start",
+                  alignItems: "center",
+                  gap: "14px",
                 }}
               >
-                <div>
-                  <strong
-                    style={{
-                      display: "block",
-                      fontSize: "18px",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    {item.name}
-                  </strong>
-
-                  <span
-                    style={{
-                      display: "inline-block",
-                      fontSize: "12px",
-                      color: "#888",
-                      border: "1px solid #444",
-                      borderRadius: "999px",
-                      padding: "4px 9px",
-                    }}
-                  >
-                    {getCategoryLabel(item.category)}
-                  </span>
-                </div>
 
                 <div
                   style={{
-                    textAlign: "right",
+                    flex: 1,
+                    minWidth: 0,
                   }}
                 >
-                  <strong
+                  <div
                     style={{
-                      fontSize: "16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "12px",
                     }}
                   >
-                    {item.quantity}
-                    {item.unit ? ` ${item.unit}` : ""}
-                  </strong>
+                    <strong
+                      style={{
+                        fontSize: "18px",
+                        lineHeight: 1.25,
+                      }}
+                    >
+                      {item.name}
+                    </strong>
+
+                    <strong
+                      style={{
+                        fontSize: "15px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.quantity}
+                      {item.unit ? ` ${item.unit}` : ""}
+                    </strong>
+                  </div>
+
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "12px",
+                      color: "var(--muted)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "999px",
+                      padding: "4px 9px",
+                      marginTop: "8px",
+                    }}
+                  >
+                <AppIcon
+                    src={category.src}
+                    fallback={category.fallback}
+                    alt={category.label}
+                    size={20}
+                />
+
+                    {category.label}
+                  </span>
                 </div>
               </div>
 
@@ -273,7 +281,7 @@ export default function FridgePage() {
                 style={{
                   marginTop: "16px",
                   paddingTop: "12px",
-                  borderTop: "1px solid #333",
+                  borderTop: "1px solid var(--border)",
                   display: "flex",
                   justifyContent: "space-between",
                   gap: "12px",
@@ -295,13 +303,13 @@ export default function FridgePage() {
                 <span
                   style={{
                     fontSize: "12px",
-                    color: "#888",
+                    color: "var(--muted)",
                   }}
                 >
                   {item.estimatedExpirationDate}
                 </span>
               </div>
-            </div>
+            </article>
           );
         })
       )}
