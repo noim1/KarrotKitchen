@@ -33,19 +33,32 @@ export type FoodItem = {
 };
 
 export type Recipe = {
-  id: string;
+    id: string;
+    name: string;
+  
+    ingredients: string[];
+    instructions: string[];
+  
+    prepTime: number;
+  
+    difficulty: "easy" | "medium" | "hard";
+  
+    dietaryTags?: string[];
+    allergens?: string[];
+  
+    missingIngredients?: string[];
+    score?: number;
+  };
 
-  name: string;
-
-  ingredients: string[];
-
-  instructions: string[];
-
-  prepTime: number;
-
-  difficulty: "easy" | "medium" | "hard";
-
-  missingIngredients?: string[];
-
-  score?: number;
-};
+export type UserPreferences = {
+    diets: string[];
+  
+    allergies: string[];
+  
+    maxCookingTime?: number;
+  
+    skillLevel?:
+      | "beginner"
+      | "intermediate"
+      | "advanced";
+  };
