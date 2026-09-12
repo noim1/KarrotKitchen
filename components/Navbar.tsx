@@ -2,33 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import AppIcon from "@/components/AppIcon";
+import { navIcons } from "@/lib/icons";
 
 const links = [
   {
     href: "/",
-    icon: "⌂",
     label: "Home",
+    icon: navIcons.home,
   },
   {
     href: "/fridge",
-    icon: "▣",
     label: "Fridge",
+    icon: navIcons.fridge,
   },
   {
     href: "/scan",
-    icon: "+",
     label: "Add",
+    icon: navIcons.add,
     center: true,
   },
   {
     href: "/recipes",
-    icon: "♨",
     label: "Recipes",
+    icon: navIcons.recipes,
   },
   {
     href: "/profile",
-    icon: "♙",
     label: "Profile",
+    icon: navIcons.profile,
   },
 ];
 
@@ -43,8 +45,8 @@ export default function Navbar() {
         left: 0,
         right: 0,
         zIndex: 1000,
-        backgroundColor: "white",
-        borderTop: "1px solid #ddd",
+        backgroundColor: "var(--nav-bg)",
+        borderTop: "1px solid var(--nav-border)",
         padding: "8px 12px 12px",
       }}
     >
@@ -66,7 +68,7 @@ export default function Navbar() {
               href={link.href}
               style={{
                 textDecoration: "none",
-                color: "black",
+                color: active ? "var(--nav-active)" : "var(--foreground)",
                 width: "70px",
                 display: "flex",
                 flexDirection: "column",
@@ -80,27 +82,25 @@ export default function Navbar() {
                   width: link.center ? "52px" : "34px",
                   height: link.center ? "52px" : "34px",
                   borderRadius: link.center ? "50%" : "10px",
-
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-
-                  fontSize: link.center ? "32px" : "24px",
-
-                  border: active
-                    ? "2px solid black"
-                    : link.center
-                    ? "2px solid black"
+                  border: active || link.center
+                    ? "2px solid var(--nav-active)"
                     : "2px solid transparent",
-
                   marginTop: link.center ? "-28px" : "0",
-
                   backgroundColor: link.center
-                    ? "white"
+                    ? "var(--accent)"
                     : "transparent",
+                  color: link.center ? "var(--accent-text)" : "inherit",
                 }}
               >
-                {link.icon}
+                <AppIcon
+                  src={link.icon.src}
+                  fallback={link.icon.fallback}
+                  alt={link.label}
+                  size={link.center ? 28 : 24}
+                />
               </div>
 
               <span

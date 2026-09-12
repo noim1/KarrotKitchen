@@ -1,8 +1,20 @@
 @import "tailwindcss";
 
+/*
+  Brand colors — edit these hex values to restyle the whole app.
+  Vercel / iPhone "Add to Home Screen" uses --accent for the status bar.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f9f1e8;
+  --foreground: #1c1917;
+  --muted: #78716c;
+  --card: #ffffff;
+  --border: #e7e5e4;
+  --nav-bg: #ffffff;
+  --nav-border: #e7e5e4;
+  --nav-active: #5c514b;
+  --accent: #5c514b;
+  --accent-text: #ffffff;
 }
 
 @theme inline {
@@ -12,15 +24,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
