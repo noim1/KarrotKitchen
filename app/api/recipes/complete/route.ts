@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { demoRecipes } from "@/data/demoRecipes";
-import { consumeInventoryItems } from "@/lib/database";
+import {
+    consumeInventoryItems,
+    recordCookingEvent,
+  } from "@/lib/database";
 
 export async function POST(request: Request) {
   try {
@@ -26,6 +29,12 @@ export async function POST(request: Request) {
     await consumeInventoryItems(
       recipe.ingredients
     );
+
+    await recordCookingEvent(
+        recipe.id,
+        recipe.name,
+        recipe.ingredients.length
+      );
 
     return NextResponse.json({
       success: true,
