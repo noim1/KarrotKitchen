@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { getInventory } from "@/lib/database";
+import { receiptItemToFoodItem } from "@/lib/inventory";
+import { addInventoryItems } from "@/lib/database";
+import { ReceiptItem } from "@/types";
 
 export async function GET() {
   try {
@@ -27,3 +30,59 @@ export async function GET() {
     );
   }
 }
+
+export async function POST(request: Request) {
+    try {
+      const body = await request.json();
+  
+      const item = body as ReceiptItem;
+  
+      if (!item.name || item.quantity === undefined || !item.category) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Missing required fields",
+          },
+          { status: 400 }
+        );
+      }
+  
+      if (item.quantity <= 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Quantity must be greater than 0",
+          },
+          { status: 400 }
+        );
+      }
+  
+      const purchaseDate =
+        new Date().toISOString().split("T")[0];
+  
+      const foodItem = receiptItemToFoodItem(
+        item,
+        purchaseDate
+      );
+  
+      const savedItems = await addInventoryItems([
+        foodItem,
+      ]);
+  
+      return NextResponse.json({
+        success: true,
+        item: savedItems[0],
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : JSON.stringify(error),
+        },
+        { status: 500 }
+      );
+    }
+  }

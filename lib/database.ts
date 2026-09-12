@@ -68,53 +68,119 @@ export async function getInventory(): Promise<FoodItem[]> {
     }));
   }
 
-  export async function saveUserPreferences(
-    preferences: UserPreferences
-  ) {
-    const { data: existing, error: fetchError } =
-      await supabase
-        .from("user_preferences")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
-  
-    if (fetchError) {
-      throw fetchError;
-    }
-  
-    if (existing) {
-      const { data, error } = await supabase
-        .from("user_preferences")
-        .update({
-          diets: preferences.diets,
-          allergies: preferences.allergies,
-          max_cooking_time:
-            preferences.maxCookingTime ?? null,
-          skill_level:
-            preferences.skillLevel ?? null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id)
-        .select()
-        .single();
-  
-      if (error) {
-        throw error;
-      }
-  
-      return data;
-    }
-  
+export async function saveUserPreferences(
+  preferences: UserPreferences
+) {
+  const { data: existing, error: fetchError } =
+    await supabase
+      .from("user_preferences")
+      .select("*")
+      .limit(1)
+      .maybeSingle();
+
+  if (fetchError) {
+    throw fetchError;
+  }
+
+  if (existing) {
     const { data, error } = await supabase
       .from("user_preferences")
-      .insert({
+      .update({
         diets: preferences.diets,
         allergies: preferences.allergies,
         max_cooking_time:
           preferences.maxCookingTime ?? null,
         skill_level:
           preferences.skillLevel ?? null,
+        updated_at: new Date().toISOString(),
       })
+      .eq("id", existing.id)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  const { data, error } = await supabase
+    .from("user_preferences")
+    .insert({
+      diets: preferences.diets,
+      allergies: preferences.allergies,
+      max_cooking_time:
+        preferences.maxCookingTime ?? null,
+      skill_level:
+        preferences.skillLevel ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function getUserPreferences():
+  Promise<UserPreferences> {
+  const { data, error } = await supabase
+    .from("user_preferences")
+    .select("*")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    return {
+      diets: [],
+      allergies: [],
+    };
+  }
+
+  return {
+    diets: data.diets ?? [],
+    allergies: data.allergies ?? [],
+    maxCookingTime:
+      data.max_cooking_time ?? undefined,
+    skillLevel:
+      data.skill_level ?? undefined,
+  };
+}
+
+export async function updateInventoryItem(
+    id: string,
+    updates: {
+      quantity?: number;
+      unit?: string;
+      estimatedExpirationDate?: string;
+    }
+  ) {
+    const databaseUpdates: Record<string, unknown> = {};
+  
+    if (updates.quantity !== undefined) {
+      databaseUpdates.quantity = updates.quantity;
+    }
+  
+    if (updates.unit !== undefined) {
+      databaseUpdates.unit = updates.unit;
+    }
+  
+    if (updates.estimatedExpirationDate !== undefined) {
+      databaseUpdates.estimated_expiration_date =
+        updates.estimatedExpirationDate;
+    }
+  
+    const { data, error } = await supabase
+      .from("inventory_items")
+      .update(databaseUpdates)
+      .eq("id", id)
       .select()
       .single();
   
@@ -125,31 +191,43 @@ export async function getInventory(): Promise<FoodItem[]> {
     return data;
   }
   
-  export async function getUserPreferences():
-    Promise<UserPreferences> {
-    const { data, error } = await supabase
-      .from("user_preferences")
-      .select("*")
-      .limit(1)
-      .maybeSingle();
+  export async function deleteInventoryItem(
+    id: string
+  ) {
+    const { error } = await supabase
+      .from("inventory_items")
+      .delete()
+      .eq("id", id);
   
     if (error) {
       throw error;
     }
+  }
+
+  export async function consumeInventoryItems(
+    ingredientNames: string[]
+  ) {
+    const inventory = await getInventory();
   
-    if (!data) {
-      return {
-        diets: [],
-        allergies: [],
-      };
+    for (const ingredientName of ingredientNames) {
+      const match = inventory.find(
+        (item) =>
+          item.normalizedName.toLowerCase() ===
+          ingredientName.toLowerCase()
+      );
+  
+      if (!match) {
+        continue;
+      }
+  
+      const newQuantity = match.quantity - 1;
+  
+      if (newQuantity <= 0) {
+        await deleteInventoryItem(match.id);
+      } else {
+        await updateInventoryItem(match.id, {
+          quantity: newQuantity,
+        });
+      }
     }
-  
-    return {
-      diets: data.diets ?? [],
-      allergies: data.allergies ?? [],
-      maxCookingTime:
-        data.max_cooking_time ?? undefined,
-      skillLevel:
-        data.skill_level ?? undefined,
-    };
   }
