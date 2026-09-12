@@ -1,4 +1,8 @@
-import { FoodItem, Recipe } from "@/types";
+import {
+    FoodItem,
+    Recipe,
+    UserPreferences,
+  } from "@/types";
 
 import {
   getDaysUntilExpiration,
@@ -35,6 +39,51 @@ export function getMissingIngredients(
       )
   );
 }
+
+export function recipeMatchesPreferences(
+    recipe: Recipe,
+    preferences: UserPreferences
+  ): boolean {
+    const recipeTags = recipe.dietaryTags ?? [];
+    const recipeAllergens = recipe.allergens ?? [];
+  
+    for (const diet of preferences.diets) {
+      if (!recipeTags.includes(diet)) {
+        return false;
+      }
+    }
+  
+    for (const allergy of preferences.allergies) {
+        const allergyLower = allergy.toLowerCase();
+      
+        const listedAsAllergen =
+          recipeAllergens
+            .map((item) => item.toLowerCase())
+            .includes(allergyLower);
+      
+        const appearsInIngredients =
+          recipe.ingredients.some(
+            (ingredient) =>
+              ingredient.toLowerCase() === allergyLower
+          );
+      
+        if (
+          listedAsAllergen ||
+          appearsInIngredients
+        ) {
+          return false;
+        }
+      }
+  
+    if (
+      preferences.maxCookingTime &&
+      recipe.prepTime > preferences.maxCookingTime
+    ) {
+      return false;
+    }
+  
+    return true;
+  }
 
 export function scoreRecipe(
   recipe: Recipe,
@@ -89,3 +138,18 @@ export function rankRecipes(
         (a.score ?? 0)
     );
 }
+
+export function getRecommendedRecipes(
+    recipes: Recipe[],
+    inventory: FoodItem[],
+    preferences: UserPreferences
+  ): Recipe[] {
+    const allowedRecipes = recipes.filter((recipe) =>
+      recipeMatchesPreferences(recipe, preferences)
+    );
+  
+    return rankRecipes(
+      allowedRecipes,
+      inventory
+    );
+  }

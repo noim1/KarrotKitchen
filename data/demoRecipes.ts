@@ -21,6 +21,15 @@ export const demoRecipes: Recipe[] = [
     prepTime: 10,
 
     difficulty: "easy",
+
+    dietaryTags: [
+        "vegetarian",
+        "gluten-free",
+      ],
+    
+      allergens: [
+        "eggs",
+      ],
   },
 
   {
@@ -43,19 +52,27 @@ export const demoRecipes: Recipe[] = [
     prepTime: 5,
 
     difficulty: "easy",
+
+    dietaryTags: [
+        "vegetarian",
+        "vegan",
+      ],
+      
+      allergens: [
+        "gluten",
+      ],
   },
 
   {
     id: "breakfast-tacos",
-
     name: "Breakfast Tacos",
-
+  
     ingredients: [
       "eggs",
       "avocado",
       "tortillas",
     ],
-
+  
     instructions: [
       "Scramble the eggs.",
       "Warm the tortillas.",
@@ -63,10 +80,19 @@ export const demoRecipes: Recipe[] = [
       "Top with avocado.",
       "Fold and serve.",
     ],
-
+  
     prepTime: 15,
-
+  
     difficulty: "easy",
+  
+    dietaryTags: [
+      "vegetarian",
+    ],
+  
+    allergens: [
+      "eggs",
+      "gluten",
+    ],
   },
 
   {
@@ -90,6 +116,7 @@ export const demoRecipes: Recipe[] = [
     prepTime: 12,
 
     difficulty: "easy",
+    
   },
 
   {

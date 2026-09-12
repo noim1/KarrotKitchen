@@ -1,22 +1,32 @@
 import { NextResponse } from "next/server";
 
-import { getInventory } from "@/lib/database";
-import { rankRecipes } from "@/lib/recipes";
+import {
+    getInventory,
+    getUserPreferences,
+  } from "@/lib/database";
+import {
+  getRecommendedRecipes,
+} from "@/lib/recipes";
+
 import { demoRecipes } from "@/data/demoRecipes";
 
 export async function GET() {
   try {
-    const inventory =
-      await getInventory();
+    const inventory = await getInventory();
+
+    const preferences =
+  await getUserPreferences();
 
     const recommendations =
-      rankRecipes(
+      getRecommendedRecipes(
         demoRecipes,
-        inventory
+        inventory,
+        preferences
       );
 
     return NextResponse.json({
       success: true,
+      preferences,
       recommendations,
     });
   } catch (error) {
