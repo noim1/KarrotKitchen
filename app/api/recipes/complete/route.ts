@@ -1,46 +1,47 @@
 import { NextResponse } from "next/server";
 
-import { demoRecipes } from "@/data/demoRecipes";
 import {
-    consumeInventoryItems,
-    recordCookingEvent,
-  } from "@/lib/database";
+  consumeInventoryItems,
+  recordCookingEvent,
+} from "@/lib/database";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
 
     const recipeId = body.recipeId;
+    const recipeName = body.recipeName;
+    const ingredients = body.ingredients;
 
-    const recipe = demoRecipes.find(
-      (recipe) => recipe.id === recipeId
-    );
-
-    if (!recipe) {
+    if (
+      !recipeId ||
+      !recipeName ||
+      !Array.isArray(ingredients)
+    ) {
       return NextResponse.json(
         {
           success: false,
-          error: "Recipe not found",
+          error: "Missing recipe information",
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
-    await consumeInventoryItems(
-      recipe.ingredients
-    );
+    await consumeInventoryItems(ingredients);
 
     await recordCookingEvent(
-        recipe.id,
-        recipe.name,
-        recipe.ingredients.length
-      );
+      recipeId,
+      recipeName,
+      ingredients.length
+    );
 
     return NextResponse.json({
       success: true,
-      recipe: recipe.name,
+      recipe: recipeName,
     });
   } catch (error) {
+    console.error("Recipe completion failed:", error);
+
     return NextResponse.json(
       {
         success: false,

@@ -5,14 +5,14 @@ export const demoReceiptItems: ReceiptItem[] = [
     name: "Baby Spinach",
     quantity: 1,
     unit: "bag",
-    category: "produce",
+    category: "vegetables",
   },
 
   {
     name: "Avocado",
     quantity: 2,
     unit: "pieces",
-    category: "produce",
+    category: "fruit",
   },
 
   {
@@ -33,6 +33,6 @@ export const demoReceiptItems: ReceiptItem[] = [
     name: "Tortillas",
     quantity: 1,
     unit: "pack",
-    category: "pantry",
+    category: "staple",
   },
 ];

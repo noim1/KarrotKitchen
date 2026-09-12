@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  analyzeGroceryImage,
+  importReceiptItems,
+} from "@/lib/api";
+import { ReceiptItem } from "@/types";
 
 export default function ItemScanner() {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  const [detectedItems, setDetectedItems] = useState<ReceiptItem[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -30,7 +39,10 @@ export default function ItemScanner() {
         return;
       }
 
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia
+      ) {
         setCameraError(
           "This browser does not support live camera access."
         );
@@ -64,7 +76,11 @@ export default function ItemScanner() {
           try {
             await video.play();
           } catch (error) {
-            console.error("Video playback failed:", error);
+            console.error(
+              "Video playback failed:",
+              error
+            );
+
             setCameraError(
               "Camera opened, but the live preview could not start."
             );
@@ -105,9 +121,11 @@ export default function ItemScanner() {
 
   function stopCamera() {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        track.stop();
-      });
+      streamRef.current
+        .getTracks()
+        .forEach((track) => {
+          track.stop();
+        });
 
       streamRef.current = null;
     }
@@ -124,7 +142,9 @@ export default function ItemScanner() {
     const canvas = canvasRef.current;
 
     if (!video || !canvas) {
-      setCameraError("Camera preview is not ready yet.");
+      setCameraError(
+        "Camera preview is not ready yet."
+      );
       return;
     }
 
@@ -151,16 +171,26 @@ export default function ItemScanner() {
     const context = canvas.getContext("2d");
 
     if (!context) {
-      setCameraError("Could not capture the image.");
+      setCameraError(
+        "Could not capture the image."
+      );
       return;
     }
 
-    context.drawImage(video, 0, 0, width, height);
+    context.drawImage(
+      video,
+      0,
+      0,
+      width,
+      height
+    );
 
     canvas.toBlob(
       (blob) => {
         if (!blob) {
-          setCameraError("Could not create the photo.");
+          setCameraError(
+            "Could not create the grocery photo."
+          );
           return;
         }
 
@@ -170,14 +200,18 @@ export default function ItemScanner() {
 
         const file = new File(
           [blob],
-          `grocery-items-${Date.now()}.jpg`,
+          `groceries-${Date.now()}.jpg`,
           {
             type: "image/jpeg",
           }
         );
 
         setImageFile(file);
-        setImageUrl(URL.createObjectURL(blob));
+        setImageUrl(
+          URL.createObjectURL(blob)
+        );
+
+        setDetectedItems([]);
 
         stopCamera();
       },
@@ -202,8 +236,11 @@ export default function ItemScanner() {
     }
 
     setImageFile(file);
-    setImageUrl(URL.createObjectURL(file));
+    setImageUrl(
+      URL.createObjectURL(file)
+    );
     setCameraError("");
+    setDetectedItems([]);
   }
 
   function removePhoto() {
@@ -214,36 +251,143 @@ export default function ItemScanner() {
     setImageFile(null);
     setImageUrl(null);
     setCameraError("");
+    setDetectedItems([]);
 
     if (uploadRef.current) {
       uploadRef.current.value = "";
     }
   }
 
-  function identifyGroceries() {
+  async function analyzeItems() {
     if (!imageFile) {
       return;
     }
 
-    console.log("Ready for grocery AI:", imageFile);
+    try {
+      setCameraError("");
+      setAnalyzing(true);
+
+      const items =
+        await analyzeGroceryImage(
+          imageFile,
+          "items"
+        );
+
+      console.log(
+        "AI found grocery items:",
+        items
+      );
+
+      setDetectedItems(items);
+
+      if (items.length === 0) {
+        setCameraError(
+          "No grocery items were detected."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Grocery analysis failed:",
+        error
+      );
+
+      setCameraError(
+        error instanceof Error
+          ? error.message
+          : "Could not identify groceries."
+      );
+    } finally {
+      setAnalyzing(false);
+    }
   }
 
+  async function addDetectedItems() {
+    if (detectedItems.length === 0) {
+      return;
+    }
+
+    try {
+      setCameraError("");
+      setSaving(true);
+
+      await importReceiptItems(
+        detectedItems
+      );
+
+      alert(
+        `${detectedItems.length} groceries added to your fridge!`
+      );
+
+      setDetectedItems([]);
+      removePhoto();
+    } catch (error) {
+      console.error(
+        "Failed to add groceries:",
+        error
+      );
+
+      setCameraError(
+        error instanceof Error
+          ? error.message
+          : "Could not add groceries."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const primaryButtonStyle = {
+    width: "100%",
+    padding: "14px 16px",
+    borderRadius: "14px",
+    border: "none",
+    fontSize: "15px",
+    fontWeight: "700",
+    cursor: "pointer",
+  };
+
+  const secondaryButtonStyle = {
+    width: "100%",
+    padding: "14px 16px",
+    borderRadius: "14px",
+    border: "1px solid #444",
+    background: "rgba(255,255,255,0.04)",
+    color: "inherit",
+    fontSize: "15px",
+    fontWeight: "600",
+    cursor: "pointer",
+  };
+
   return (
-    <div
+    <section
       style={{
-        maxWidth: "430px",
-        margin: "30px auto",
-        padding: "24px",
-        border: "1px solid #ddd",
-        borderRadius: "16px",
-        backgroundColor: "white",
+        width: "100%",
+        padding: "20px",
+        border: "1px solid #333",
+        borderRadius: "20px",
+        background: "rgba(255,255,255,0.025)",
+        boxSizing: "border-box",
       }}
     >
-      <h2 style={{ marginTop: 0 }}>
+      <h2
+        style={{
+          marginTop: 0,
+          marginBottom: "6px",
+          fontSize: "21px",
+        }}
+      >
         Scan Grocery Items
       </h2>
 
-      <p style={{ color: "#666" }}>
+      <p
+        style={{
+          color: "#888",
+          lineHeight: 1.5,
+          fontSize: "14px",
+          marginTop: 0,
+          marginBottom: "20px",
+        }}
+      >
         Take a live photo of your groceries or upload an existing image.
       </p>
 
@@ -260,33 +404,25 @@ export default function ItemScanner() {
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "12px",
+            gap: "10px",
           }}
         >
           <button
             type="button"
             onClick={startCamera}
-            style={{
-              width: "100%",
-              padding: "16px",
-              fontSize: "16px",
-              cursor: "pointer",
-            }}
+            style={secondaryButtonStyle}
           >
-            📷 Open Camera
+            Open Camera
           </button>
 
           <button
             type="button"
-            onClick={() => uploadRef.current?.click()}
-            style={{
-              width: "100%",
-              padding: "16px",
-              fontSize: "16px",
-              cursor: "pointer",
-            }}
+            onClick={() =>
+              uploadRef.current?.click()
+            }
+            style={secondaryButtonStyle}
           >
-            🖼️ Upload Photo
+            Upload Photo
           </button>
         </div>
       )}
@@ -304,7 +440,7 @@ export default function ItemScanner() {
               maxHeight: "460px",
               objectFit: "cover",
               backgroundColor: "black",
-              borderRadius: "12px",
+              borderRadius: "16px",
               display: "block",
               marginBottom: "12px",
             }}
@@ -314,25 +450,17 @@ export default function ItemScanner() {
             type="button"
             onClick={capturePhoto}
             style={{
-              width: "100%",
-              padding: "15px",
+              ...primaryButtonStyle,
               marginBottom: "10px",
-              fontSize: "16px",
-              fontWeight: "600",
-              cursor: "pointer",
             }}
           >
-            📸 Capture Photo
+            Capture Groceries
           </button>
 
           <button
             type="button"
             onClick={stopCamera}
-            style={{
-              width: "100%",
-              padding: "12px",
-              cursor: "pointer",
-            }}
+            style={secondaryButtonStyle}
           >
             Cancel Camera
           </button>
@@ -347,8 +475,9 @@ export default function ItemScanner() {
       {cameraError && (
         <p
           style={{
-            color: "red",
+            color: "#d66",
             marginTop: "14px",
+            fontSize: "14px",
           }}
         >
           {cameraError}
@@ -364,55 +493,140 @@ export default function ItemScanner() {
               width: "100%",
               maxHeight: "460px",
               objectFit: "contain",
-              borderRadius: "12px",
+              borderRadius: "16px",
               marginBottom: "12px",
+              background: "rgba(255,255,255,0.02)",
             }}
           />
 
-          <button
-            type="button"
-            onClick={() => {
-              removePhoto();
-              startCamera();
-            }}
+          <div
             style={{
-              width: "100%",
-              padding: "12px",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "10px",
               marginBottom: "10px",
-              cursor: "pointer",
             }}
           >
-            📷 Retake
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                removePhoto();
+                startCamera();
+              }}
+              style={secondaryButtonStyle}
+            >
+              Retake
+            </button>
+
+            <button
+              type="button"
+              onClick={removePhoto}
+              style={secondaryButtonStyle}
+            >
+              Remove
+            </button>
+          </div>
 
           <button
             type="button"
-            onClick={removePhoto}
+            onClick={analyzeItems}
+            disabled={analyzing}
             style={{
-              width: "100%",
-              padding: "12px",
-              marginBottom: "10px",
-              cursor: "pointer",
+              ...primaryButtonStyle,
+              opacity: analyzing ? 0.6 : 1,
+              cursor: analyzing
+                ? "not-allowed"
+                : "pointer",
             }}
           >
-            Remove Photo
+            {analyzing
+              ? "Identifying..."
+              : "Identify Groceries"}
           </button>
 
-          <button
-            type="button"
-            onClick={identifyGroceries}
-            style={{
-              width: "100%",
-              padding: "15px",
-              fontSize: "16px",
-              fontWeight: "600",
-              cursor: "pointer",
-            }}
-          >
-            Identify Groceries
-          </button>
+          {detectedItems.length > 0 && (
+            <div
+              style={{
+                marginTop: "20px",
+                padding: "16px",
+                border: "1px solid #333",
+                borderRadius: "16px",
+              }}
+            >
+              <h3
+                style={{
+                  marginTop: 0,
+                  marginBottom: "12px",
+                }}
+              >
+                Detected Groceries
+              </h3>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}
+              >
+                {detectedItems.map(
+                  (item, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        padding: "12px",
+                        border: "1px solid #333",
+                        borderRadius: "12px",
+                      }}
+                    >
+                      <strong
+                        style={{
+                          display: "block",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        {item.name}
+                      </strong>
+
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#888",
+                        }}
+                      >
+                        {item.quantity}
+                        {item.unit
+                          ? ` ${item.unit}`
+                          : ""}
+                        {" • "}
+                        {item.category}
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={addDetectedItems}
+                disabled={saving}
+                style={{
+                  ...primaryButtonStyle,
+                  marginTop: "16px",
+                  opacity: saving ? 0.6 : 1,
+                  cursor: saving
+                    ? "not-allowed"
+                    : "pointer",
+                }}
+              >
+                {saving
+                  ? "Adding..."
+                  : "Add to Fridge"}
+              </button>
+            </div>
+          )}
         </div>
       )}
-    </div>
+    </section>
   );
 }

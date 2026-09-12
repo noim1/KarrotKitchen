@@ -7,13 +7,14 @@ import { receiptItemToFoodItem } from "@/lib/inventory";
 import { addInventoryItems } from "@/lib/database";
 
 const validCategories = [
-  "produce",
-  "dairy",
-  "meat",
-  "pantry",
-  "frozen",
-  "other",
-];
+    "meat",
+    "dairy",
+    "fruit",
+    "vegetables",
+    "condiments",
+    "staple",
+    "other",
+  ];
 
 function isValidReceiptItem(
   item: unknown
