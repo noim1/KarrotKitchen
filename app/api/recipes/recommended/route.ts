@@ -13,7 +13,7 @@ export async function GET() {
 
     const preferences = {
       diets: ["vegetarian"],
-      allergies: ["gluten"],
+      allergies: [],
       maxCookingTime: 20,
       skillLevel: "beginner" as const,
     };
