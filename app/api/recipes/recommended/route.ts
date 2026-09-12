@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { getInventory } from "@/lib/database";
+import {
+    getInventory,
+    getUserPreferences,
+  } from "@/lib/database";
 import {
   getRecommendedRecipes,
 } from "@/lib/recipes";
@@ -11,12 +14,8 @@ export async function GET() {
   try {
     const inventory = await getInventory();
 
-    const preferences = {
-      diets: ["vegetarian"],
-      allergies: [],
-      maxCookingTime: 20,
-      skillLevel: "beginner" as const,
-    };
+    const preferences =
+  await getUserPreferences();
 
     const recommendations =
       getRecommendedRecipes(

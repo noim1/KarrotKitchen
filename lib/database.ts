@@ -1,5 +1,9 @@
 import { supabase } from "@/lib/supabase";
-import { FoodItem } from "@/types";
+import {
+    FoodItem,
+    UserPreferences,
+  } from "@/types";
+
 
 export async function addInventoryItems(items: FoodItem[]) {
   const rows = items.map((item) => ({
@@ -62,4 +66,90 @@ export async function getInventory(): Promise<FoodItem[]> {
   
       source: row.source,
     }));
+  }
+
+  export async function saveUserPreferences(
+    preferences: UserPreferences
+  ) {
+    const { data: existing, error: fetchError } =
+      await supabase
+        .from("user_preferences")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
+  
+    if (fetchError) {
+      throw fetchError;
+    }
+  
+    if (existing) {
+      const { data, error } = await supabase
+        .from("user_preferences")
+        .update({
+          diets: preferences.diets,
+          allergies: preferences.allergies,
+          max_cooking_time:
+            preferences.maxCookingTime ?? null,
+          skill_level:
+            preferences.skillLevel ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+  
+      if (error) {
+        throw error;
+      }
+  
+      return data;
+    }
+  
+    const { data, error } = await supabase
+      .from("user_preferences")
+      .insert({
+        diets: preferences.diets,
+        allergies: preferences.allergies,
+        max_cooking_time:
+          preferences.maxCookingTime ?? null,
+        skill_level:
+          preferences.skillLevel ?? null,
+      })
+      .select()
+      .single();
+  
+    if (error) {
+      throw error;
+    }
+  
+    return data;
+  }
+  
+  export async function getUserPreferences():
+    Promise<UserPreferences> {
+    const { data, error } = await supabase
+      .from("user_preferences")
+      .select("*")
+      .limit(1)
+      .maybeSingle();
+  
+    if (error) {
+      throw error;
+    }
+  
+    if (!data) {
+      return {
+        diets: [],
+        allergies: [],
+      };
+    }
+  
+    return {
+      diets: data.diets ?? [],
+      allergies: data.allergies ?? [],
+      maxCookingTime:
+        data.max_cooking_time ?? undefined,
+      skillLevel:
+        data.skill_level ?? undefined,
+    };
   }
