@@ -203,3 +203,31 @@ export async function updateInventoryItem(
       throw error;
     }
   }
+
+  export async function consumeInventoryItems(
+    ingredientNames: string[]
+  ) {
+    const inventory = await getInventory();
+  
+    for (const ingredientName of ingredientNames) {
+      const match = inventory.find(
+        (item) =>
+          item.normalizedName.toLowerCase() ===
+          ingredientName.toLowerCase()
+      );
+  
+      if (!match) {
+        continue;
+      }
+  
+      const newQuantity = match.quantity - 1;
+  
+      if (newQuantity <= 0) {
+        await deleteInventoryItem(match.id);
+      } else {
+        await updateInventoryItem(match.id, {
+          quantity: newQuantity,
+        });
+      }
+    }
+  }
