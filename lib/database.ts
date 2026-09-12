@@ -231,3 +231,128 @@ export async function updateInventoryItem(
       }
     }
   }
+
+export async function getInventoryStats() {
+  const inventory = await getInventory();
+
+  const totalItems = inventory.length;
+
+  const today = new Date();
+
+  const expiringSoon = inventory.filter((item) => {
+    const expiration = new Date(
+      item.estimatedExpirationDate
+    );
+
+    const differenceMs =
+      expiration.getTime() -
+      today.getTime();
+
+    const differenceDays =
+      differenceMs /
+      (1000 * 60 * 60 * 24);
+
+    return (
+      differenceDays >= 0 &&
+      differenceDays <= 3
+    );
+  }).length;
+
+  const cookingStats =
+    await getCookingStats();
+
+  return {
+    totalItems,
+    expiringSoon,
+    recipesCooked:
+      cookingStats.recipesCooked,
+    itemsSaved:
+      cookingStats.itemsSaved,
+  };
+}
+
+export async function recordCookingEvent(
+  recipeId: string,
+  recipeName: string,
+  itemsUsed: number
+) {
+  const { data, error } = await supabase
+    .from("cooking_events")
+    .insert({
+      recipe_id: recipeId,
+      recipe_name: recipeName,
+      items_used: itemsUsed,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error(
+      "Failed to record cooking event:",
+      error
+    );
+    throw error;
+  }
+
+  return data;
+}
+
+export async function getCookingStats() {
+  const { data, error } = await supabase
+    .from("cooking_events")
+    .select("items_used");
+
+  if (error) {
+    throw error;
+  }
+
+  const recipesCooked = data.length;
+
+  const itemsSaved = data.reduce(
+    (total, event) =>
+      total + (event.items_used ?? 0),
+    0
+  );
+
+  return {
+    recipesCooked,
+    itemsSaved,
+  };
+}
+
+export async function getAchievements() {
+  const cookingStats = await getCookingStats();
+
+  const achievements = [
+    {
+      id: "first-bite",
+      name: "First Bite",
+      description: "Cook your first recipe",
+      unlocked:
+        cookingStats.recipesCooked >= 1,
+    },
+    {
+      id: "fridge-hero",
+      name: "Fridge Hero",
+      description: "Save 5 food items",
+      unlocked:
+        cookingStats.itemsSaved >= 5,
+    },
+    {
+      id: "waste-warrior",
+      name: "Waste Warrior",
+      description: "Save 10 food items",
+      unlocked:
+        cookingStats.itemsSaved >= 10,
+    },
+    {
+      id: "home-chef",
+      name: "Home Chef",
+      description: "Cook 5 recipes",
+      unlocked:
+        cookingStats.recipesCooked >= 5,
+    },
+  ];
+
+  return achievements;
+}
