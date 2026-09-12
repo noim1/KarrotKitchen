@@ -2,34 +2,98 @@ import { Recipe } from "@/types";
 
 export const demoRecipes: Recipe[] = [
   {
-    id: "recipe-1",
+    id: "spinach-eggs",
 
-    name: "Spinach Avocado Breakfast Tacos",
+    name: "Spinach Scrambled Eggs",
 
     ingredients: [
       "spinach",
-      "avocado",
       "eggs",
+    ],
+
+    instructions: [
+      "Wash the spinach.",
+      "Whisk the eggs.",
+      "Cook the spinach in a pan for 1-2 minutes.",
+      "Add the eggs and scramble until cooked.",
+    ],
+
+    prepTime: 10,
+
+    difficulty: "easy",
+  },
+
+  {
+    id: "avocado-toast",
+
+    name: "Avocado Toast",
+
+    ingredients: [
+      "avocado",
+      "bread",
+    ],
+
+    instructions: [
+      "Toast the bread.",
+      "Mash the avocado.",
+      "Spread avocado over the toast.",
+      "Season and serve.",
+    ],
+
+    prepTime: 5,
+
+    difficulty: "easy",
+  },
+
+  {
+    id: "breakfast-tacos",
+
+    name: "Breakfast Tacos",
+
+    ingredients: [
+      "eggs",
+      "avocado",
       "tortillas",
     ],
 
     instructions: [
       "Scramble the eggs.",
-      "Cook the spinach with the eggs.",
       "Warm the tortillas.",
-      "Add avocado.",
-      "Serve.",
+      "Add the eggs.",
+      "Top with avocado.",
+      "Fold and serve.",
     ],
 
     prepTime: 15,
 
     difficulty: "easy",
-
-    missingIngredients: [],
   },
 
   {
-    id: "recipe-2",
+    id: "spinach-quesadilla",
+
+    name: "Spinach Quesadilla",
+
+    ingredients: [
+      "spinach",
+      "tortillas",
+      "cheese",
+    ],
+
+    instructions: [
+      "Cook the spinach briefly.",
+      "Place cheese and spinach on a tortilla.",
+      "Fold the tortilla.",
+      "Cook both sides until crispy.",
+    ],
+
+    prepTime: 12,
+
+    difficulty: "easy",
+  },
+
+  {
+    id: "yogurt-bowl",
 
     name: "Greek Yogurt Bowl",
 
@@ -40,15 +104,12 @@ export const demoRecipes: Recipe[] = [
 
     instructions: [
       "Add yogurt to a bowl.",
-      "Top with strawberries.",
+      "Slice the strawberries.",
+      "Add strawberries on top.",
     ],
 
     prepTime: 5,
 
     difficulty: "easy",
-
-    missingIngredients: [
-      "strawberries",
-    ],
   },
 ];
