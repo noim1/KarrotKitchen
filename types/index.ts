@@ -1,9 +1,10 @@
 export type FoodCategory =
-  | "produce"
-  | "dairy"
   | "meat"
-  | "pantry"
-  | "frozen"
+  | "dairy"
+  | "fruit"
+  | "vegetables"
+  | "condiments"
+  | "staple"
   | "other";
 
 export type ReceiptItem = {
