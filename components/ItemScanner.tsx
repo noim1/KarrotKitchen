@@ -1,24 +1,49 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function ItemScanner() {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const uploadRef = useRef<HTMLInputElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   async function startCamera() {
     try {
       setCameraError("");
 
+      if (!window.isSecureContext) {
+        setCameraError(
+          "Camera access requires HTTPS or localhost. Use the deployed Vercel site or localhost."
+        );
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError(
+          "This browser does not support live camera access."
+        );
+        return;
+      }
+
+      stopCamera();
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: "environment",
+          facingMode: {
+            ideal: "environment",
+          },
         },
         audio: false,
       });
@@ -26,22 +51,64 @@ export default function ItemScanner() {
       streamRef.current = stream;
       setCameraActive(true);
 
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+      requestAnimationFrame(() => {
+        const video = videoRef.current;
+
+        if (!video) {
+          return;
         }
-      }, 0);
+
+        video.srcObject = stream;
+
+        video.onloadedmetadata = async () => {
+          try {
+            await video.play();
+          } catch (error) {
+            console.error("Video playback failed:", error);
+            setCameraError(
+              "Camera opened, but the live preview could not start."
+            );
+          }
+        };
+      });
     } catch (error) {
-      console.error(error);
+      console.error("Camera error:", error);
+
+      if (error instanceof DOMException) {
+        if (error.name === "NotAllowedError") {
+          setCameraError(
+            "Camera permission was blocked. Allow camera access in your browser settings and try again."
+          );
+          return;
+        }
+
+        if (error.name === "NotFoundError") {
+          setCameraError(
+            "No camera was found on this device."
+          );
+          return;
+        }
+
+        if (error.name === "NotReadableError") {
+          setCameraError(
+            "Your camera is already being used by another app or browser tab."
+          );
+          return;
+        }
+      }
+
       setCameraError(
-        "Camera could not open. Check that camera permission is allowed."
+        "Could not open the camera. Check camera permissions and try again."
       );
     }
   }
 
   function stopCamera() {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+
       streamRef.current = null;
     }
 
@@ -57,30 +124,66 @@ export default function ItemScanner() {
     const canvas = canvasRef.current;
 
     if (!video || !canvas) {
+      setCameraError("Camera preview is not ready yet.");
       return;
     }
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    if (video.readyState < 2) {
+      setCameraError(
+        "Camera is still loading. Wait a moment and try again."
+      );
+      return;
+    }
+
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+
+    if (!width || !height) {
+      setCameraError(
+        "Camera image is not ready yet. Wait a moment and try again."
+      );
+      return;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
 
     const context = canvas.getContext("2d");
 
     if (!context) {
+      setCameraError("Could not capture the image.");
       return;
     }
 
-    context.drawImage(
-      video,
-      0,
-      0,
-      canvas.width,
-      canvas.height
+    context.drawImage(video, 0, 0, width, height);
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          setCameraError("Could not create the photo.");
+          return;
+        }
+
+        if (imageUrl) {
+          URL.revokeObjectURL(imageUrl);
+        }
+
+        const file = new File(
+          [blob],
+          `grocery-items-${Date.now()}.jpg`,
+          {
+            type: "image/jpeg",
+          }
+        );
+
+        setImageFile(file);
+        setImageUrl(URL.createObjectURL(blob));
+
+        stopCamera();
+      },
+      "image/jpeg",
+      0.92
     );
-
-    const photo = canvas.toDataURL("image/jpeg");
-
-    setImageUrl(photo);
-    stopCamera();
   }
 
   function handleUpload(
@@ -92,30 +195,56 @@ export default function ItemScanner() {
       return;
     }
 
-    const url = URL.createObjectURL(file);
-    setImageUrl(url);
+    stopCamera();
+
+    if (imageUrl) {
+      URL.revokeObjectURL(imageUrl);
+    }
+
+    setImageFile(file);
+    setImageUrl(URL.createObjectURL(file));
+    setCameraError("");
   }
 
-  function clearPhoto() {
+  function removePhoto() {
+    if (imageUrl) {
+      URL.revokeObjectURL(imageUrl);
+    }
+
+    setImageFile(null);
     setImageUrl(null);
+    setCameraError("");
+
+    if (uploadRef.current) {
+      uploadRef.current.value = "";
+    }
+  }
+
+  function identifyGroceries() {
+    if (!imageFile) {
+      return;
+    }
+
+    console.log("Ready for grocery AI:", imageFile);
   }
 
   return (
     <div
       style={{
-        maxWidth: "420px",
-        margin: "40px auto",
+        maxWidth: "430px",
+        margin: "30px auto",
         padding: "24px",
         border: "1px solid #ddd",
         borderRadius: "16px",
         backgroundColor: "white",
       }}
     >
-      <h2>Scan Grocery Items</h2>
+      <h2 style={{ marginTop: 0 }}>
+        Scan Grocery Items
+      </h2>
 
-      <p>
-        Take a photo of your groceries or upload an existing
-        photo.
+      <p style={{ color: "#666" }}>
+        Take a live photo of your groceries or upload an existing image.
       </p>
 
       <input
@@ -127,14 +256,19 @@ export default function ItemScanner() {
       />
 
       {!cameraActive && !imageUrl && (
-        <>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+          }}
+        >
           <button
             type="button"
             onClick={startCamera}
             style={{
               width: "100%",
-              padding: "18px",
-              marginBottom: "12px",
+              padding: "16px",
               fontSize: "16px",
               cursor: "pointer",
             }}
@@ -147,14 +281,14 @@ export default function ItemScanner() {
             onClick={() => uploadRef.current?.click()}
             style={{
               width: "100%",
-              padding: "18px",
+              padding: "16px",
               fontSize: "16px",
               cursor: "pointer",
             }}
           >
             🖼️ Upload Photo
           </button>
-        </>
+        </div>
       )}
 
       {cameraActive && (
@@ -162,12 +296,16 @@ export default function ItemScanner() {
           <video
             ref={videoRef}
             autoPlay
-            playsInline
             muted
+            playsInline
             style={{
               width: "100%",
-              borderRadius: "12px",
+              minHeight: "260px",
+              maxHeight: "460px",
+              objectFit: "cover",
               backgroundColor: "black",
+              borderRadius: "12px",
+              display: "block",
               marginBottom: "12px",
             }}
           />
@@ -177,9 +315,10 @@ export default function ItemScanner() {
             onClick={capturePhoto}
             style={{
               width: "100%",
-              padding: "14px",
+              padding: "15px",
               marginBottom: "10px",
               fontSize: "16px",
+              fontWeight: "600",
               cursor: "pointer",
             }}
           >
@@ -195,7 +334,7 @@ export default function ItemScanner() {
               cursor: "pointer",
             }}
           >
-            Cancel
+            Cancel Camera
           </button>
         </div>
       )}
@@ -206,7 +345,12 @@ export default function ItemScanner() {
       />
 
       {cameraError && (
-        <p style={{ color: "red" }}>
+        <p
+          style={{
+            color: "red",
+            marginTop: "14px",
+          }}
+        >
           {cameraError}
         </p>
       )}
@@ -218,6 +362,8 @@ export default function ItemScanner() {
             alt="Grocery preview"
             style={{
               width: "100%",
+              maxHeight: "460px",
+              objectFit: "contain",
               borderRadius: "12px",
               marginBottom: "12px",
             }}
@@ -226,7 +372,7 @@ export default function ItemScanner() {
           <button
             type="button"
             onClick={() => {
-              clearPhoto();
+              removePhoto();
               startCamera();
             }}
             style={{
@@ -236,12 +382,12 @@ export default function ItemScanner() {
               cursor: "pointer",
             }}
           >
-            📷 Retake Photo
+            📷 Retake
           </button>
 
           <button
             type="button"
-            onClick={clearPhoto}
+            onClick={removePhoto}
             style={{
               width: "100%",
               padding: "12px",
@@ -254,11 +400,12 @@ export default function ItemScanner() {
 
           <button
             type="button"
+            onClick={identifyGroceries}
             style={{
               width: "100%",
-              padding: "14px",
+              padding: "15px",
               fontSize: "16px",
-              fontWeight: "bold",
+              fontWeight: "600",
               cursor: "pointer",
             }}
           >

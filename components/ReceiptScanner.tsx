@@ -3,16 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 
 export default function ReceiptScanner() {
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const uploadRef = useRef<HTMLInputElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
@@ -21,7 +19,176 @@ export default function ReceiptScanner() {
     };
   }, []);
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function startCamera() {
+    try {
+      setCameraError("");
+
+      if (!window.isSecureContext) {
+        setCameraError(
+          "Camera access requires HTTPS or localhost. Use the deployed Vercel site or localhost."
+        );
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError(
+          "This browser does not support live camera access."
+        );
+        return;
+      }
+
+      stopCamera();
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: {
+            ideal: "environment",
+          },
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+      setCameraActive(true);
+
+      requestAnimationFrame(() => {
+        const video = videoRef.current;
+
+        if (!video) {
+          return;
+        }
+
+        video.srcObject = stream;
+
+        video.onloadedmetadata = async () => {
+          try {
+            await video.play();
+          } catch (error) {
+            console.error("Video playback failed:", error);
+            setCameraError(
+              "Camera opened, but the live preview could not start."
+            );
+          }
+        };
+      });
+    } catch (error) {
+      console.error("Camera error:", error);
+
+      if (error instanceof DOMException) {
+        if (error.name === "NotAllowedError") {
+          setCameraError(
+            "Camera permission was blocked. Allow camera access in your browser settings and try again."
+          );
+          return;
+        }
+
+        if (error.name === "NotFoundError") {
+          setCameraError(
+            "No camera was found on this device."
+          );
+          return;
+        }
+
+        if (error.name === "NotReadableError") {
+          setCameraError(
+            "Your camera is already being used by another app or browser tab."
+          );
+          return;
+        }
+      }
+
+      setCameraError(
+        "Could not open the camera. Check camera permissions and try again."
+      );
+    }
+  }
+
+  function stopCamera() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setCameraActive(false);
+  }
+
+  function capturePhoto() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas) {
+      setCameraError("Camera preview is not ready yet.");
+      return;
+    }
+
+    if (video.readyState < 2) {
+      setCameraError(
+        "Camera is still loading. Wait a moment and try again."
+      );
+      return;
+    }
+
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+
+    if (!width || !height) {
+      setCameraError(
+        "Camera image is not ready yet. Wait a moment and try again."
+      );
+      return;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      setCameraError("Could not capture the image.");
+      return;
+    }
+
+    context.drawImage(video, 0, 0, width, height);
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          setCameraError("Could not create the receipt photo.");
+          return;
+        }
+
+        if (imageUrl) {
+          URL.revokeObjectURL(imageUrl);
+        }
+
+        const file = new File(
+          [blob],
+          `receipt-${Date.now()}.jpg`,
+          {
+            type: "image/jpeg",
+          }
+        );
+
+        setImageFile(file);
+        setImageUrl(URL.createObjectURL(blob));
+
+        stopCamera();
+      },
+      "image/jpeg",
+      0.92
+    );
+  }
+
+  function handleUpload(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -36,163 +203,59 @@ export default function ReceiptScanner() {
 
     setImageFile(file);
     setImageUrl(URL.createObjectURL(file));
-    setStatusMessage("");
+    setCameraError("");
   }
 
-  function openFilePicker() {
-    fileInputRef.current?.click();
-  }
-
-  async function startCamera() {
-    try {
-      setCameraError("");
-      setStatusMessage("");
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-        },
-        audio: false,
-      });
-
-      streamRef.current = stream;
-      setCameraActive(true);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (error) {
-      console.error(error);
-      setCameraError(
-        "Could not access the camera. Check your browser camera permissions."
-      );
-    }
-  }
-
-  function stopCamera() {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-
-    setCameraActive(false);
-  }
-
-  function capturePhoto() {
-    if (!videoRef.current || !canvasRef.current) {
-      return;
-    }
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const context = canvas.getContext("2d");
-
-    if (!context) {
-      return;
-    }
-
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          return;
-        }
-
-        const file = new File([blob], "receipt-photo.jpg", {
-          type: "image/jpeg",
-        });
-
-        if (imageUrl) {
-          URL.revokeObjectURL(imageUrl);
-        }
-
-        setImageFile(file);
-        setImageUrl(URL.createObjectURL(blob));
-        setStatusMessage("");
-
-        stopCamera();
-      },
-      "image/jpeg",
-      0.9
-    );
-  }
-
-  function clearImage() {
-    setImageFile(null);
-
+  function removePhoto() {
     if (imageUrl) {
       URL.revokeObjectURL(imageUrl);
     }
 
+    setImageFile(null);
     setImageUrl(null);
-    setStatusMessage("");
+    setCameraError("");
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (uploadRef.current) {
+      uploadRef.current.value = "";
     }
   }
 
-  async function handleAnalyze() {
+  function analyzeReceipt() {
     if (!imageFile) {
       return;
     }
 
-    setIsAnalyzing(true);
-    setStatusMessage("Analyzing your receipt...");
-
-    // Temporary placeholder until AI is connected
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    console.log("Ready to analyze receipt:", imageFile.name);
-
-    setIsAnalyzing(false);
-    setStatusMessage("Receipt ready for review.");
+    console.log("Ready for receipt AI:", imageFile);
   }
 
   return (
     <div
       style={{
-        maxWidth: "420px",
-        margin: "40px auto",
+        maxWidth: "430px",
+        margin: "30px auto",
         padding: "24px",
         border: "1px solid #ddd",
         borderRadius: "16px",
         backgroundColor: "white",
-        boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
       }}
     >
-      <h2 style={{ marginTop: 0, marginBottom: "8px" }}>
+      <h2 style={{ marginTop: 0 }}>
         Scan Receipt
       </h2>
 
-      <p
-        style={{
-          marginTop: 0,
-          marginBottom: "20px",
-          color: "#666",
-        }}
-      >
-        Take a photo of your grocery receipt or upload an existing image.
+      <p style={{ color: "#666" }}>
+        Take a live photo of your receipt or upload an existing image.
       </p>
 
       <input
-        ref={fileInputRef}
+        ref={uploadRef}
         type="file"
         accept="image/*"
-        onChange={handleFileChange}
+        onChange={handleUpload}
         style={{ display: "none" }}
       />
 
-      {!imageUrl && !cameraActive && (
+      {!cameraActive && !imageUrl && (
         <div
           style={{
             display: "flex",
@@ -205,12 +268,9 @@ export default function ReceiptScanner() {
             onClick={startCamera}
             style={{
               width: "100%",
-              padding: "18px",
-              borderRadius: "12px",
-              border: "2px dashed #aaa",
-              backgroundColor: "#fafafa",
-              cursor: "pointer",
+              padding: "16px",
               fontSize: "16px",
+              cursor: "pointer",
             }}
           >
             📷 Open Camera
@@ -218,15 +278,12 @@ export default function ReceiptScanner() {
 
           <button
             type="button"
-            onClick={openFilePicker}
+            onClick={() => uploadRef.current?.click()}
             style={{
               width: "100%",
-              padding: "18px",
-              borderRadius: "12px",
-              border: "1px solid #bbb",
-              backgroundColor: "white",
-              cursor: "pointer",
+              padding: "16px",
               fontSize: "16px",
+              cursor: "pointer",
             }}
           >
             🖼️ Upload Photo
@@ -239,10 +296,16 @@ export default function ReceiptScanner() {
           <video
             ref={videoRef}
             autoPlay
+            muted
             playsInline
             style={{
               width: "100%",
+              minHeight: "260px",
+              maxHeight: "460px",
+              objectFit: "cover",
+              backgroundColor: "black",
               borderRadius: "12px",
+              display: "block",
               marginBottom: "12px",
             }}
           />
@@ -252,9 +315,10 @@ export default function ReceiptScanner() {
             onClick={capturePhoto}
             style={{
               width: "100%",
-              padding: "14px",
-              borderRadius: "10px",
+              padding: "15px",
               marginBottom: "10px",
+              fontSize: "16px",
+              fontWeight: "600",
               cursor: "pointer",
             }}
           >
@@ -267,19 +331,26 @@ export default function ReceiptScanner() {
             style={{
               width: "100%",
               padding: "12px",
-              borderRadius: "10px",
               cursor: "pointer",
             }}
           >
-            Cancel
+            Cancel Camera
           </button>
         </div>
       )}
 
-      <canvas ref={canvasRef} style={{ display: "none" }} />
+      <canvas
+        ref={canvasRef}
+        style={{ display: "none" }}
+      />
 
       {cameraError && (
-        <p style={{ color: "red", marginTop: "12px" }}>
+        <p
+          style={{
+            color: "red",
+            marginTop: "14px",
+          }}
+        >
           {cameraError}
         </p>
       )}
@@ -291,65 +362,36 @@ export default function ReceiptScanner() {
             alt="Receipt preview"
             style={{
               width: "100%",
-              maxHeight: "380px",
+              maxHeight: "460px",
               objectFit: "contain",
               borderRadius: "12px",
-              border: "1px solid #ddd",
-              marginBottom: "16px",
+              marginBottom: "12px",
             }}
           />
 
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              marginBottom: "12px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={startCamera}
-              disabled={isAnalyzing}
-              style={{
-                flex: 1,
-                padding: "12px",
-                borderRadius: "10px",
-                border: "1px solid #bbb",
-                backgroundColor: "white",
-                cursor: "pointer",
-              }}
-            >
-              Retake
-            </button>
-
-            <button
-              type="button"
-              onClick={openFilePicker}
-              disabled={isAnalyzing}
-              style={{
-                flex: 1,
-                padding: "12px",
-                borderRadius: "10px",
-                border: "1px solid #bbb",
-                backgroundColor: "white",
-                cursor: "pointer",
-              }}
-            >
-              Change File
-            </button>
-          </div>
-
           <button
             type="button"
-            onClick={clearImage}
-            disabled={isAnalyzing}
+            onClick={() => {
+              removePhoto();
+              startCamera();
+            }}
             style={{
               width: "100%",
               padding: "12px",
-              marginBottom: "12px",
-              borderRadius: "10px",
-              border: "1px solid #bbb",
-              backgroundColor: "white",
+              marginBottom: "10px",
+              cursor: "pointer",
+            }}
+          >
+            📷 Retake
+          </button>
+
+          <button
+            type="button"
+            onClick={removePhoto}
+            style={{
+              width: "100%",
+              padding: "12px",
+              marginBottom: "10px",
               cursor: "pointer",
             }}
           >
@@ -358,33 +400,17 @@ export default function ReceiptScanner() {
 
           <button
             type="button"
-            onClick={handleAnalyze}
-            disabled={isAnalyzing}
+            onClick={analyzeReceipt}
             style={{
               width: "100%",
-              padding: "14px",
-              borderRadius: "10px",
-              border: "none",
+              padding: "15px",
               fontSize: "16px",
               fontWeight: "600",
-              cursor: isAnalyzing ? "not-allowed" : "pointer",
+              cursor: "pointer",
             }}
           >
-            {isAnalyzing ? "Analyzing..." : "Analyze Receipt"}
+            Analyze Receipt
           </button>
-
-          {statusMessage && (
-            <p
-              style={{
-                marginTop: "14px",
-                marginBottom: 0,
-                textAlign: "center",
-                color: "#555",
-              }}
-            >
-              {statusMessage}
-            </p>
-          )}
         </div>
       )}
     </div>
